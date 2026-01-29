@@ -8,9 +8,9 @@ import math
 import torch
 from torch.nn.functional import sigmoid, softmax, interpolate
 from skimage import draw
-from floortrans import post_prosessing
-from floortrans.loaders.augmentations import RotateNTurns
-from floortrans.plotting import shp_mask
+from . import post_prosessing
+from .loaders.augmentations import RotateNTurns
+from .plotting import shp_mask
 
 
 class runningScore(object):
