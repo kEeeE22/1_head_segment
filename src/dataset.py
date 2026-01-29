@@ -9,8 +9,13 @@ from numpy import genfromtxt
 from torch.utils.data import Dataset
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+import sys
+import os
 
-from Cubicasa5k.floortrans.loaders.house import House
+# Add parent directory to path to import CubiCasa5k
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from CubiCasa5k.floortrans.loaders.house import House
+
 from .config import INPUT_SIZE, IMAGENET_MEAN, IMAGENET_STD
 
 
