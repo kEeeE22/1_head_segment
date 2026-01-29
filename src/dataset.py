@@ -10,7 +10,7 @@ from torch.utils.data import Dataset
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-from floortrans.loaders.house import House
+from Cubicasa5k.floortrans.loaders.house import House
 from .config import INPUT_SIZE, IMAGENET_MEAN, IMAGENET_STD
 
 

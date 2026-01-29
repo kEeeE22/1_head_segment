@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from floortrans.loaders.svg_utils import PolygonWall, get_polygon, calc_distance, get_room_number, get_icon, get_icon_number, get_points, get_direction, get_gaussian2D
+from svg_utils import PolygonWall, get_polygon, calc_distance, get_room_number, get_icon, get_icon_number, get_points, get_direction, get_gaussian2D
 from xml.dom import minidom
 from skimage.draw import polygon
 import cv2
