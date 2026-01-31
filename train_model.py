@@ -33,7 +33,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train CubiCasa wall segmentation model')
     
     # Data arguments
-    parser.add_argument('--data_folder', type=str, required=True, default=DEFAULT_DATA_FOLDER,
+    parser.add_argument('--data_folder', type=str, default=DEFAULT_DATA_FOLDER,
                         help='Root folder containing the CubiCasa5k dataset')
     parser.add_argument('--train_file', type=str, default=TRAIN_FILE,
                         help='Training data list file')

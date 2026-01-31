@@ -31,3 +31,5 @@ lmdb
 # Optional: For better performance
 pillow
 scikit-image
+
+svgpathtools
