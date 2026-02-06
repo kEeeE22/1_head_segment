@@ -108,15 +108,22 @@ def main(args):
         train_r = {'iou':0, 'f1':0, 'prec':0, 'rec':0}
         train_cw = {'iou':0, 'f1':0, 'prec':0, 'rec':0}
 
-        for im, cw, r, _ in train_loader:
-            im, cw, r = im.to(device), cw.to(device), r.to(device)
+        for batch in train_loader:
+            im = batch['image'].to(device)
+            cw = batch['boundary'].to(device)
+            r = batch['room'].to(device)
+            
             optimizer.zero_grad()
 
             logits_r, logits_cw = model(im)
 
-            loss_r = balanced_entropy(logits_r, r)
-            loss_cw = balanced_entropy(logits_cw, cw)
-            w1, w2 = cross_two_tasks_weight(r, cw)
+            # Convert to one-hot encoding for loss calculation
+            r_onehot = F.one_hot(r, num_classes=logits_r.size(1)).permute(0, 3, 1, 2).float()
+            cw_onehot = F.one_hot(cw, num_classes=logits_cw.size(1)).permute(0, 3, 1, 2).float()
+
+            loss_r = balanced_entropy(logits_r, r_onehot)
+            loss_cw = balanced_entropy(logits_cw, cw_onehot)
+            w1, w2 = cross_two_tasks_weight(r_onehot, cw_onehot)
             loss = w1 * loss_r + w2 * loss_cw
 
             loss.backward()
@@ -124,8 +131,8 @@ def main(args):
 
             train_loss += loss.item()
 
-            mr = compute_metrics(logits_r, r, r.size(1))
-            mcw = compute_metrics(logits_cw, cw, cw.size(1))
+            mr = compute_metrics(logits_r, r_onehot, r_onehot.size(1))
+            mcw = compute_metrics(logits_cw, cw_onehot, cw_onehot.size(1))
 
             for k in train_r:
                 train_r[k] += mr[k]
@@ -144,20 +151,26 @@ def main(args):
         val_cw = {'iou':0, 'f1':0, 'prec':0, 'rec':0}
 
         with torch.no_grad():
-            for im, cw, r, _ in val_loader:
-                im, cw, r = im.to(device), cw.to(device), r.to(device)
+            for batch in val_loader:
+                im = batch['image'].to(device)
+                cw = batch['boundary'].to(device)
+                r = batch['room'].to(device)
 
                 logits_r, logits_cw = model(im)
 
-                loss_r = balanced_entropy(logits_r, r)
-                loss_cw = balanced_entropy(logits_cw, cw)
-                w1, w2 = cross_two_tasks_weight(r, cw)
+                # Convert to one-hot encoding for loss calculation
+                r_onehot = F.one_hot(r, num_classes=logits_r.size(1)).permute(0, 3, 1, 2).float()
+                cw_onehot = F.one_hot(cw, num_classes=logits_cw.size(1)).permute(0, 3, 1, 2).float()
+
+                loss_r = balanced_entropy(logits_r, r_onehot)
+                loss_cw = balanced_entropy(logits_cw, cw_onehot)
+                w1, w2 = cross_two_tasks_weight(r_onehot, cw_onehot)
                 loss = w1 * loss_r + w2 * loss_cw
 
                 val_loss += loss.item()
 
-                mr = compute_metrics(logits_r, r, r.size(1))
-                mcw = compute_metrics(logits_cw, cw, cw.size(1))
+                mr = compute_metrics(logits_r, r_onehot, r_onehot.size(1))
+                mcw = compute_metrics(logits_cw, cw_onehot, cw_onehot.size(1))
 
                 for k in val_r:
                     val_r[k] += mr[k]
