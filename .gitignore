@@ -1,6 +1,6 @@
 /dataset
 /venv
-
+.venv
 .idea
 __pycache__
 

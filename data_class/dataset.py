@@ -16,7 +16,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from CubiCasa5k.floortrans.loaders.house import House
 
-from .config import INPUT_SIZE, IMAGENET_MEAN, IMAGENET_STD
+from config import INPUT_SIZE, IMAGENET_MEAN, IMAGENET_STD
 
 
 class FloorplanSVG(Dataset):

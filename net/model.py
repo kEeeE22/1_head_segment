@@ -5,7 +5,7 @@ Model initialization and loss functions.
 import torch
 import segmentation_models_pytorch as smp
 
-from .config import (
+from config import (
     DEVICE, 
     ENCODER_NAME, 
     ENCODER_WEIGHTS, 

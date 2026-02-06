@@ -6,7 +6,7 @@ import torch
 import segmentation_models_pytorch as smp
 from tqdm import tqdm
 
-from .config import DEVICE
+from config import DEVICE
 
 
 def train_full_metrics(model, trainloader, valloader, criterion, optimizer, 
