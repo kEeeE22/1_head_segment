@@ -61,12 +61,12 @@ def get_loader(args):
     train_dataset = DPVR_cubicasa(
         DEFAULT_DATA_FOLDER, 
         'train.txt', 
-        transform=get_train_transform
+        transform=get_train_transform()
     )
     val_dataset = DPVR_cubicasa(
         DEFAULT_DATA_FOLDER, 
         'val.txt', 
-        transform=get_val_transform
+        transform=get_val_transform()
     )
 
     print(f"Train samples: {len(train_dataset)}")
