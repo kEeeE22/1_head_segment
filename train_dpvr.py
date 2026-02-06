@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 import segmentation_models_pytorch as smp
-
+from net import DFPmodel
 from data_class import DPVR_cubicasa, get_train_transform, get_val_transform
 # =========================
 # TensorBoard
