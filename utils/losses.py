@@ -13,41 +13,47 @@ def balanced_entropy(preds, targets):
     
     Args:
         preds (torch.Tensor): Predicted logits of shape (B, C, H, W)
-        targets (torch.Tensor): Target one-hot encoded masks of shape (B, C, H, W)
+        targets (torch.Tensor): Target class indices of shape (B, H, W)
         
     Returns:
         torch.Tensor: Scalar loss value
     """
     eps = 1e-6
-    m = nn.Softmax(dim=1)
-    z = m(preds)
-    z = torch.clamp(z, eps, 1 - eps)
-    log_z = torch.log(z)
+    B, C, H, W = preds.shape
+    
+    # Apply softmax to get probabilities
+    probs = F.softmax(preds, dim=1)
+    probs = torch.clamp(probs, eps, 1 - eps)
+    log_probs = torch.log(probs)
+    
+    # Ensure targets are long type
+    targets = targets.long()
+    
+    # Calculate class weights based on frequency (inverse frequency weighting)
+    total_pixels = B * H * W
+    class_weights = []
+    
+    for c in range(C):
+        n_c = torch.sum((targets == c).float())
+        # Weight is inversely proportional to class frequency
+        weight = (total_pixels - n_c) / total_pixels if n_c > 0 else 1.0
+        class_weights.append(weight)
+    
+    class_weights = torch.tensor(class_weights, device=preds.device)
+    
+    # Compute weighted cross-entropy
+    # Gather log probabilities for ground truth classes
+    targets_flat = targets.view(B, 1, H, W)
+    log_probs_gt = torch.gather(log_probs, 1, targets_flat).squeeze(1)
+    
+    # Apply class weights
+    weights_map = class_weights[targets]
+    
+    # Compute loss
+    loss = -torch.sum(weights_map * log_probs_gt) / total_pixels
+    
+    return loss
 
-    num_classes = targets.size(1)
-    ind = torch.argmax(targets, 1).long()
-    total = torch.sum(targets)
-
-    m_c, n_c = [], []
-    for c in range(num_classes):
-        m_c.append((ind == c).int())
-        n_c.append(torch.sum(m_c[-1]).float())
-
-    c = [total - n_c[i] for i in range(num_classes)]
-    tc = sum(c)
-
-    loss = 0
-    for i in range(num_classes):
-        w = c[i] / tc
-        m_c_one_hot = F.one_hot(
-            (i * m_c[i]).permute(1, 2, 0).long(),
-            num_classes
-        ).permute(2, 3, 0, 1)
-
-        y_c = m_c_one_hot * targets
-        loss += w * torch.sum(-torch.sum(y_c * log_z, dim=2))
-
-    return loss / num_classes
 
 
 def cross_two_tasks_weight(rooms, boundaries):

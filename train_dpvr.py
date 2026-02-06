@@ -117,13 +117,16 @@ def main(args):
 
             logits_r, logits_cw = model(im)
 
-            # Convert to one-hot encoding for loss calculation
-            r_onehot = F.one_hot(r, num_classes=logits_r.size(1)).permute(0, 3, 1, 2).float()
-            cw_onehot = F.one_hot(cw, num_classes=logits_cw.size(1)).permute(0, 3, 1, 2).float()
-
-            loss_r = balanced_entropy(logits_r, r_onehot)
-            loss_cw = balanced_entropy(logits_cw, cw_onehot)
-            w1, w2 = cross_two_tasks_weight(r_onehot, cw_onehot)
+            # Loss function now accepts class indices directly
+            loss_r = balanced_entropy(logits_r, r)
+            loss_cw = balanced_entropy(logits_cw, cw)
+            
+            # For task weighting, use pixel counts
+            w1 = torch.sum(r > 0).float()
+            w2 = torch.sum(cw > 0).float()
+            total = w1 + w2
+            w1, w2 = w2 / total, w1 / total  # Inverse weighting
+            
             loss = w1 * loss_r + w2 * loss_cw
 
             loss.backward()
@@ -131,8 +134,9 @@ def main(args):
 
             train_loss += loss.item()
 
-            mr = compute_metrics(logits_r, r_onehot, r_onehot.size(1))
-            mcw = compute_metrics(logits_cw, cw_onehot, cw_onehot.size(1))
+            # For metrics, convert predictions to class indices
+            mr = compute_metrics(logits_r, F.one_hot(r, num_classes=logits_r.size(1)).permute(0, 3, 1, 2), logits_r.size(1))
+            mcw = compute_metrics(logits_cw, F.one_hot(cw, num_classes=logits_cw.size(1)).permute(0, 3, 1, 2), logits_cw.size(1))
 
             for k in train_r:
                 train_r[k] += mr[k]
@@ -158,19 +162,23 @@ def main(args):
 
                 logits_r, logits_cw = model(im)
 
-                # Convert to one-hot encoding for loss calculation
-                r_onehot = F.one_hot(r, num_classes=logits_r.size(1)).permute(0, 3, 1, 2).float()
-                cw_onehot = F.one_hot(cw, num_classes=logits_cw.size(1)).permute(0, 3, 1, 2).float()
-
-                loss_r = balanced_entropy(logits_r, r_onehot)
-                loss_cw = balanced_entropy(logits_cw, cw_onehot)
-                w1, w2 = cross_two_tasks_weight(r_onehot, cw_onehot)
+                # Loss function now accepts class indices directly
+                loss_r = balanced_entropy(logits_r, r)
+                loss_cw = balanced_entropy(logits_cw, cw)
+                
+                # For task weighting, use pixel counts
+                w1 = torch.sum(r > 0).float()
+                w2 = torch.sum(cw > 0).float()
+                total = w1 + w2
+                w1, w2 = w2 / total, w1 / total
+                
                 loss = w1 * loss_r + w2 * loss_cw
 
                 val_loss += loss.item()
 
-                mr = compute_metrics(logits_r, r_onehot, r_onehot.size(1))
-                mcw = compute_metrics(logits_cw, cw_onehot, cw_onehot.size(1))
+                # For metrics, convert to one-hot
+                mr = compute_metrics(logits_r, F.one_hot(r, num_classes=logits_r.size(1)).permute(0, 3, 1, 2), logits_r.size(1))
+                mcw = compute_metrics(logits_cw, F.one_hot(cw, num_classes=logits_cw.size(1)).permute(0, 3, 1, 2), logits_cw.size(1))
 
                 for k in val_r:
                     val_r[k] += mr[k]
