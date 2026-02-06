@@ -1,12 +1,8 @@
-import gc
-import cv2
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision
-from torchvision import transforms,utils,models
-import sys
+from torchvision import models
 
 class DFPmodel(torch.nn.Module):
     def __init__(self,pretrained=True,freeze=True):
@@ -178,68 +174,32 @@ class DFPmodel(torch.nn.Module):
 
 
 def create_dfpmodel(pretrained=True, freeze=True, loadmodel=None, device='cpu'):
-    model = DFPmodel(pretrained=pretrained, freeze=freeze):
-    if loadmodel: 
-        model.load_state_dict(torch.load(args.loadmodel))
+    """
+    Create and initialize DFP model.
+    
+    Args:
+        pretrained (bool): Use pretrained VGG encoder
+        freeze (bool): Freeze encoder weights
+        loadmodel (str): Path to model checkpoint to load
+        device (str): Device to move model to
+        
+    Returns:
+        DFPmodel: Initialized model
+    """
+    model = DFPmodel(pretrained=pretrained, freeze=freeze)
+    if loadmodel:
+        model.load_state_dict(torch.load(loadmodel))
     model.to(device)
-
     return model
 
-def get_dfpcriterion():
-    def criterion(logit_r, logit_b, r, b):
-        w1, w2 = cross_two_tasks_weight(r, b)
-        return w1 * balanced_entropy(logit_r, r) + w2 * balanced_entropy(logit_b, b)
-    return criterion
-
 if __name__ == "__main__":
-
+    # Test model forward pass
     with torch.no_grad():
-        testin = torch.randn(1,3,512,512)
+        testin = torch.randn(1, 3, 512, 512)
         model = DFPmodel()
-        model.load_state_dict(torch.load('weights650.pth'))
-        ### Shared VGG encoder
-        logits_r,logits_cw = model.forward(testin)
-        # 0: 64x256x256, 1: 128x128x128
-        # 2: 256x64x64, 3: 512x32x32, 4: 512x16x16
-        print(logits_cw.size(),logits_r.size())
-        breakpoint()
-        gc.collect()
-
-
-def balanced_entropy(preds,targets):
-    eps = 1e-6
-    m = nn.Softmax(dim=1)
-    z = m(preds)
-    cliped_z = torch.clamp(z,eps,1-eps)
-    log_z = torch.log(cliped_z)
-    num_classes = targets.size(1)
-    ind = torch.argmax(targets,1).type(torch.int)
-
-    total = torch.sum(targets)
-    
-    m_c,n_c = [],[]
-    for c in range(num_classes):
-        m_c.append((ind==c).type(torch.int))
-        n_c.append(torch.sum(m_c[-1]).type(torch.float))
-
-    c = []
-    for i in range(num_classes):
-        c.append(total-n_c[i])
-    tc = sum(c)
-
-    loss = 0
-    for i in range(num_classes):
-        w = c[i]/tc
-        m_c_one_hot = F.one_hot((i*m_c[i]).permute(1,2,0).type(torch.long),
-                num_classes)
-        m_c_one_hot = m_c_one_hot.permute(2,3,0,1)
-        y_c = m_c_one_hot*targets
-        loss += w*torch.sum(-torch.sum(y_c*log_z,axis=2))
-    return loss/num_classes
-
-def cross_two_tasks_weight(rooms,boundaries):
-    p1 = torch.sum(rooms).type(torch.float)
-    p2 = torch.sum(boundaries).type(torch.float)
-    w1 = torch.div(p2,p1+p2)
-    w2 = torch.div(p1,p1+p2)
-    return w1,w2
+        # Uncomment to load weights:
+        # model.load_state_dict(torch.load('weights650.pth'))
+        
+        logits_r, logits_cw = model.forward(testin)
+        print(f"Room logits shape: {logits_r.size()}")
+        print(f"Boundary logits shape: {logits_cw.size()}")

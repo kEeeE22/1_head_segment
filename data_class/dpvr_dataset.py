@@ -1,4 +1,13 @@
+import os
+import sys
+import cv2
+import numpy as np
+import torch
 from torch.utils.data import Dataset
+
+# Add parent directory to import CubiCasa5k
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from CubiCasa5k.floortrans.loaders.house import House
 
 CUSTOM_ROOM_MAP = {
     "Closet": 1, "Storage": 1, "DressingRoom": 1, "Pantry": 1,
@@ -62,8 +71,9 @@ class DPVR_cubicasa(Dataset):
         else:
             boundary, room, door = masks
 
+        # Convert to tensors if not already
         if not isinstance(image, torch.Tensor):
-            image = torch.from_numpy(image).float().permute(2, 0, 1) / 255.0 # Normalize về 0-1 nếu cần
+            image = torch.from_numpy(image).float().permute(2, 0, 1) / 255.0
 
         if not isinstance(boundary, torch.Tensor):
             boundary = torch.from_numpy(boundary).long()
@@ -78,43 +88,37 @@ class DPVR_cubicasa(Dataset):
         }
 
     def get_txt(self, index):
+        """Load sample from file system."""
         folder = self.folders[index]
     
-        img_path = os.path.join(
-            self.root_dir, folder, self.image_file_name
-        )
-        svg_path = os.path.join(
-            self.root_dir, folder, self.svg_file_name
-        )
+        img_path = os.path.join(self.root_dir, folder, self.image_file_name)
+        svg_path = os.path.join(self.root_dir, folder, self.svg_file_name)
     
-        # ---- đọc ảnh ----
+        # Read image
         fplan = cv2.imread(img_path)
         if fplan is None:
-            raise FileNotFoundError(img_path)
+            raise FileNotFoundError(f"Image not found: {img_path}")
     
         fplan = cv2.cvtColor(fplan, cv2.COLOR_BGR2RGB)
         height, width, _ = fplan.shape
     
-        # ---- load house ----
-        house = House(
-            svg_path,
-            height,
-            width,
-            room_list=CUSTOM_ROOM_MAP,
-            icon_list=CUSTOM_ICON_MAP
-        )
+        # Load house from SVG
+        house = House(svg_path, height, width, room_list=CUSTOM_ROOM_MAP, icon_list=CUSTOM_ICON_MAP)
     
-        # ---- ROOM từ SVG ----
-        room_mask = build_room_mask_from_svg(
-            svg_path, height, width, CUSTOM_ROOM_MAP
-        )
+        # Build room mask from SVG
+        room_mask = house.get_segmentation_tensor()[0]
+        
+        # Map room classes using CUSTOM_ROOM_MAP
+        room_output = np.zeros((height, width), dtype=np.uint8)
+        for original_class, mapped_class in CUSTOM_ROOM_MAP.items():
+            room_output[room_mask == original_class] = mapped_class
     
-        # ---- WALL ----
+        # Build boundary mask (walls)
         boundary_mask = np.zeros((height, width), dtype=np.uint8)
         for wall in house.wall_objs:
             boundary_mask[wall.rr, wall.cc] = 1
     
-        # ---- DOOR / WINDOW ----
+        # Build door/window mask
         door_mask = np.zeros((height, width), dtype=np.uint8)
         door_mask[(house.icons == 1) | (house.icons == 2)] = 1
         boundary_mask[door_mask == 1] = 0
@@ -122,6 +126,6 @@ class DPVR_cubicasa(Dataset):
         return {
             "image": fplan.astype(np.uint8),
             "boundary": boundary_mask,
-            "room": room_mask,
+            "room": room_output,
             "door": door_mask,
         }

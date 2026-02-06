@@ -1,5 +1,6 @@
 import argparse
 import random
+import os
 import numpy as np
 from datetime import datetime
 
@@ -13,53 +14,12 @@ from torch.utils.tensorboard import SummaryWriter
 import segmentation_models_pytorch as smp
 from net import DFPmodel
 from data_class import DPVR_cubicasa, get_train_transform, get_val_transform
-# =========================
+from utils.losses import balanced_entropy, cross_two_tasks_weight
+from config import LOG_DIR, DEFAULT_DATA_FOLDER
+
 # TensorBoard
-# =========================
-writer = SummaryWriter('log/store2')
+writer = SummaryWriter(LOG_DIR)
 
-# =========================
-# Loss functions
-# =========================
-def balanced_entropy(preds, targets):
-    eps = 1e-6
-    m = nn.Softmax(dim=1)
-    z = m(preds)
-    z = torch.clamp(z, eps, 1 - eps)
-    log_z = torch.log(z)
-
-    num_classes = targets.size(1)
-    ind = torch.argmax(targets, 1).long()
-    total = torch.sum(targets)
-
-    m_c, n_c = [], []
-    for c in range(num_classes):
-        m_c.append((ind == c).int())
-        n_c.append(torch.sum(m_c[-1]).float())
-
-    c = [total - n_c[i] for i in range(num_classes)]
-    tc = sum(c)
-
-    loss = 0
-    for i in range(num_classes):
-        w = c[i] / tc
-        m_c_one_hot = F.one_hot(
-            (i * m_c[i]).permute(1, 2, 0).long(),
-            num_classes
-        ).permute(2, 3, 0, 1)
-
-        y_c = m_c_one_hot * targets
-        loss += w * torch.sum(-torch.sum(y_c * log_z, dim=2))
-
-    return loss / num_classes
-
-
-def cross_two_tasks_weight(rooms, boundaries):
-    p1 = torch.sum(rooms).float()
-    p2 = torch.sum(boundaries).float()
-    w1 = p2 / (p1 + p2)
-    w2 = p1 / (p1 + p2)
-    return w1, w2
 
 # =========================
 # Metrics helper
@@ -96,17 +56,25 @@ def setup(args):
     return device, model, optimizer
 
 
-def getloader(args):
-    trans = transforms.Compose([transforms.ToTensor()])
-    train_dataset = DPVR_cubicasa('/dataset/cubicasa5k/cubicasa5k/', 'train.txt', transform=get_train_transform)
-    val_dataset = DPVR_cubicasa('/dataset/cubicasa5k/cubicasa5k/', 'val.txt', transform=get_val_transform)
+def get_loader(args):
+    """Create train and validation data loaders."""
+    train_dataset = DPVR_cubicasa(
+        DEFAULT_DATA_FOLDER, 
+        'train.txt', 
+        transform=get_train_transform
+    )
+    val_dataset = DPVR_cubicasa(
+        DEFAULT_DATA_FOLDER, 
+        'val.txt', 
+        transform=get_val_transform
+    )
 
-    print(len(train_dataset))
-    print(len(val_dataset))
+    print(f"Train samples: {len(train_dataset)}")
+    print(f"Val samples: {len(val_dataset)}")
+    
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
-        sampler=train_sampler,
         num_workers=args.numworkers,
         shuffle=True
     )
@@ -114,24 +82,23 @@ def getloader(args):
     val_loader = DataLoader(
         val_dataset,
         batch_size=args.batch_size,
-        sampler=val_sampler,
-        num_workers=args.numworkers
+        num_workers=args.numworkers,
+        shuffle=False
     )
 
     return train_loader, val_loader
 
-# =========================
-# Main train loop
-# =========================
+
 def main(args):
+    """Main training function."""
     device, model, optimizer = setup(args)
-    train_loader, val_loader = getloader(args)
+    train_loader, val_loader = get_loader(args)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    ckpt_path = f"log/store2/checkpoint_{timestamp}.pt"
-
-    if args.earlystop:
-        early_stopping = EarlyStopping(patience=args.patience, verbose=True)
+    ckpt_path = os.path.join(LOG_DIR, f"checkpoint_{timestamp}.pt")
+    
+    best_val_loss = float('inf')
+    patience_counter = 0
 
     for epoch in range(args.maxiters):
         # ================= TRAIN =================
@@ -218,15 +185,22 @@ def main(args):
             'boundary': val_cw['iou']
         }, epoch)
 
+        # Save best model
         if args.earlystop:
-            early_stopping(val_loss, model)
-            if early_stopping.early_stop:
-                print("Early stopping")
-                break
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                patience_counter = 0
+                torch.save(model.state_dict(), ckpt_path)
+                print(f"Saved checkpoint to {ckpt_path}")
+            else:
+                patience_counter += 1
+                if patience_counter >= args.patience:
+                    print(f"Early stopping triggered after {epoch+1} epochs")
+                    break
         else:
             torch.save(model.state_dict(), ckpt_path)
 
-    torch.save(model.state_dict(), ckpt_path)
+    print(f"\nTraining completed. Final model saved to {ckpt_path}")
     return model
 
 # =========================

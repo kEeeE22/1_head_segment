@@ -43,7 +43,16 @@ DEFAULT_EPOCHS = 100
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
-# Model configuration
+# Wall Segmentation Model configuration
 ENCODER_NAME = 'resnet34'
 ENCODER_WEIGHTS = 'imagenet'
 NUM_CLASSES = 2  # background and wall
+
+# DPVR Model configuration
+DPVR_NUM_ROOM_CLASSES = 9
+DPVR_NUM_BOUNDARY_CLASSES = 3
+DPVR_ENCODER = 'vgg16'
+
+# Logging and checkpoints
+LOG_DIR = 'log/store2'
+CHECKPOINT_DIR = 'checkpoint/'
