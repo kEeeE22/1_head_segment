@@ -17,11 +17,20 @@ CUSTOM_ROOM_MAP = {
     "Hall": 5, "Entry": 5, "Corridor": 5, "StairWell": 5,
     "Outdoor": 6, "Balcony": 6, "Terrace": 6,
     "Wall": 10, "Railing": 10, 
-     "Background": 0, "Undefined": 6
+    "Background": 0, "Undefined": 6,
+    "Alcove": None, "Attic": None, "Ballroom": None, "Bar": None, "Basement": None,
+    "Below150cm": None, "CarPort": None, "Church": None, "ConferenceRoom": None,
+    "Conservatory": None, "Counter": None, "Den": None, "DraughtLobby": None,
+    "EatingArea": None, "Elevated": None, "Elevator": None, "ExerciseRoom": None,
+    "Garbage": None, "HallWay": None, "HotTub": None, "Library": None, "Loft": None,
+    "MediaRoom": None, "MeetingRoom": None, "Museum": None, "Nook": None,
+    "OpenToBelow": None, "Reception": None, "RecreationRoom": None, "RetailSpace": None,
+    "Room": None, "Sanctuary": None, "ServiceRoom": None, "ServingArea": None,
+    "Skylights": None, "Stable": None, "Stage": None, "Stairs": None, "SunRoom": None,
+    "SwimmingPool": None, "TechnicalRoom": None, "Theatre": None, "UserDefined": None,
+    "Utility": None,
 }
 
-# Icon mapping - based on CubiCasa5k/floortrans/loaders/house.py icons_selected
-# Only Door is used (value 1), all others set to None to suppress warnings
 CUSTOM_ICON_MAP = {
     "Window": 1,
     "Door": 2,
