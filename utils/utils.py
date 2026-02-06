@@ -6,7 +6,6 @@ import torch
 from tqdm import tqdm
 import numpy as np
 
-
 def patch_house_file(file_path):
     """
     Patch the house.py file to fix overflow and division errors.

@@ -27,7 +27,7 @@ INPUT_SIZE = 512
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Default data paths (can be overridden)
-DEFAULT_DATA_FOLDER = '/dataset/cubicasa5k/cubicasa5k'
+DEFAULT_DATA_FOLDER = '/dataset/cubicasa5k/cubicasa5k/'
 TRAIN_FILE = 'train.txt'
 VAL_FILE = 'val.txt'
 TEST_FILE = 'test.txt'

@@ -1,34 +1,24 @@
-# Core Deep Learning Framework
 torch
 torchvision
 
-# Segmentation Models
 segmentation-models-pytorch
 
-# Data Augmentation
 albumentations
 
-# Computer Vision
 opencv-python
 opencv-contrib-python
 
-# Numerical Computing
-numpy
+numpy==2.0.2
 
-# Visualization
 matplotlib
 
-# Progress Bar
 tqdm
 
-# SVG Processing (for floortrans.loaders.house)
 svgwrite
 cairosvg
 
-# Optional: LMDB support (if using LMDB format)
 lmdb
 
-# Optional: For better performance
 pillow
 scikit-image
 
