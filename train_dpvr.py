@@ -135,8 +135,8 @@ def main(args):
             train_loss += loss.item()
 
             # For metrics, convert predictions to class indices
-            mr = compute_metrics(logits_r, F.one_hot(r, num_classes=logits_r.size(1)).permute(0, 3, 1, 2), logits_r.size(1))
-            mcw = compute_metrics(logits_cw, F.one_hot(cw, num_classes=logits_cw.size(1)).permute(0, 3, 1, 2), logits_cw.size(1))
+            mr = compute_metrics(logits_r, F.one_hot(r.long(), num_classes=logits_r.size(1)).permute(0, 3, 1, 2), logits_r.size(1))
+            mcw = compute_metrics(logits_cw, F.one_hot(cw.long(), num_classes=logits_cw.size(1)).permute(0, 3, 1, 2), logits_cw.size(1))
 
             for k in train_r:
                 train_r[k] += mr[k]
@@ -177,8 +177,8 @@ def main(args):
                 val_loss += loss.item()
 
                 # For metrics, convert to one-hot
-                mr = compute_metrics(logits_r, F.one_hot(r, num_classes=logits_r.size(1)).permute(0, 3, 1, 2), logits_r.size(1))
-                mcw = compute_metrics(logits_cw, F.one_hot(cw, num_classes=logits_cw.size(1)).permute(0, 3, 1, 2), logits_cw.size(1))
+                mr = compute_metrics(logits_r, F.one_hot(r.long(), num_classes=logits_r.size(1)).permute(0, 3, 1, 2), logits_r.size(1))
+                mcw = compute_metrics(logits_cw, F.one_hot(cw.long(), num_classes=logits_cw.size(1)).permute(0, 3, 1, 2), logits_cw.size(1))
 
                 for k in val_r:
                     val_r[k] += mr[k]
