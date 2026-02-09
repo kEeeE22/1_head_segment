@@ -58,19 +58,22 @@ def balanced_entropy(preds, targets):
 
 def cross_two_tasks_weight(rooms, boundaries):
     """
-    Calculate dynamic weights for balancing two tasks based on pixel counts.
-    
-    Args:
-        rooms (torch.Tensor): Room segmentation tensor
-        boundaries (torch.Tensor): Boundary segmentation tensor
-        
-    Returns:
-        tuple: (w1, w2) weights for room and boundary tasks
+    Calculate dynamic weights based on pixel counts (Indices version).
+    Matches logic of main.py but adapted for Index inputs.
     """
-    p1 = torch.sum(rooms).float()
-    p2 = torch.sum(boundaries).float()
-    w1 = p2 / (p1 + p2)
-    w2 = p1 / (p1 + p2)
+    # SỬA: Đếm số pixel khác 0 (foreground) thay vì tính tổng giá trị
+    p1 = torch.sum(rooms > 0).float()
+    p2 = torch.sum(boundaries > 0).float()
+    
+    # Tránh lỗi chia cho 0
+    total = p1 + p2 + 1e-6
+    
+    # Logic đảo nghịch trọng số giống main.py:
+    # Task nào ít diện tích hơn (p nhỏ) sẽ được gán trọng số lớn hơn
+    # main.py: w1 (room weight) = p2 (boundary pixels) / total
+    w1 = p2 / total
+    w2 = p1 / total
+    
     return w1, w2
 
 

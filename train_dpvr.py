@@ -104,6 +104,8 @@ def main(args):
         # ================= TRAIN =================
         model.train()
         train_loss = 0
+        train_loss_r = 0
+        train_loss_cw = 0
 
         train_r = {'iou':0, 'f1':0, 'prec':0, 'rec':0}
         train_cw = {'iou':0, 'f1':0, 'prec':0, 'rec':0}
@@ -133,6 +135,8 @@ def main(args):
             optimizer.step()
 
             train_loss += loss.item()
+            train_loss_r += loss_r.item()
+            train_loss_cw += loss_cw.item()
 
             # For metrics, convert predictions to class indices
             mr = compute_metrics(logits_r, F.one_hot(r.long(), num_classes=logits_r.size(1)).permute(0, 3, 1, 2), logits_r.size(1))
@@ -150,6 +154,8 @@ def main(args):
         # ================= VALID =================
         model.eval()
         val_loss = 0
+        val_loss_r = 0
+        val_loss_cw = 0
 
         val_r = {'iou':0, 'f1':0, 'prec':0, 'rec':0}
         val_cw = {'iou':0, 'f1':0, 'prec':0, 'rec':0}
@@ -166,15 +172,13 @@ def main(args):
                 loss_r = balanced_entropy(logits_r, r)
                 loss_cw = balanced_entropy(logits_cw, cw)
                 
-                # For task weighting, use pixel counts
-                w1 = torch.sum(r > 0).float()
-                w2 = torch.sum(cw > 0).float()
-                total = w1 + w2
-                w1, w2 = w2 / total, w1 / total
+                w1, w2 = cross_two_tasks_weight(r, cw)
                 
                 loss = w1 * loss_r + w2 * loss_cw
 
                 val_loss += loss.item()
+                val_loss_r += loss_r.item()
+                val_loss_cw += loss_cw.item()
 
                 # For metrics, convert to one-hot
                 mr = compute_metrics(logits_r, F.one_hot(r.long(), num_classes=logits_r.size(1)).permute(0, 3, 1, 2), logits_r.size(1))
@@ -190,12 +194,38 @@ def main(args):
             val_cw[k] /= n_val
 
         # ================= LOG =================
+        # Average losses
+        avg_train_loss = train_loss / n_train
+        avg_train_loss_r = train_loss_r / n_train
+        avg_train_loss_cw = train_loss_cw / n_train
+        
+        avg_val_loss = val_loss / n_val
+        avg_val_loss_r = val_loss_r / n_val
+        avg_val_loss_cw = val_loss_cw / n_val
+        
         print(
             f"\nEpoch {epoch} | "
+            f"Train Loss: {avg_train_loss:.4f} (R: {avg_train_loss_r:.4f}, CW: {avg_train_loss_cw:.4f}) | "
+            f"Val Loss: {avg_val_loss:.4f} (R: {avg_val_loss_r:.4f}, CW: {avg_val_loss_cw:.4f})"
+        )
+        print(
             f"Train IoU (R/CW): {train_r['iou']:.3f}/{train_cw['iou']:.3f} | "
             f"Val IoU (R/CW): {val_r['iou']:.3f}/{val_cw['iou']:.3f}"
         )
 
+        # TensorBoard logging
+        writer.add_scalars('Loss/train', {
+            'total': avg_train_loss,
+            'room': avg_train_loss_r,
+            'boundary': avg_train_loss_cw
+        }, epoch)
+        
+        writer.add_scalars('Loss/val', {
+            'total': avg_val_loss,
+            'room': avg_val_loss_r,
+            'boundary': avg_val_loss_cw
+        }, epoch)
+        
         writer.add_scalars('IoU/train', {
             'room': train_r['iou'],
             'boundary': train_cw['iou']
@@ -208,11 +238,11 @@ def main(args):
 
         # Save best model
         if args.earlystop:
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
+            if avg_val_loss < best_val_loss:
+                best_val_loss = avg_val_loss
                 patience_counter = 0
                 torch.save(model.state_dict(), ckpt_path)
-                print(f"Saved checkpoint to {ckpt_path}")
+                print(f"Saved checkpoint to {ckpt_path} (Val Loss: {avg_val_loss:.4f})")
             else:
                 patience_counter += 1
                 if patience_counter >= args.patience:
