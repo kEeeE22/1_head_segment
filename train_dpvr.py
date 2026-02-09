@@ -123,11 +123,7 @@ def main(args):
             loss_r = balanced_entropy(logits_r, r)
             loss_cw = balanced_entropy(logits_cw, cw)
             
-            # For task weighting, use pixel counts
-            w1 = torch.sum(r > 0).float()
-            w2 = torch.sum(cw > 0).float()
-            total = w1 + w2
-            w1, w2 = w2 / total, w1 / total  # Inverse weighting
+            w1, w2 = cross_two_tasks_weight(r, cw)
             
             loss = w1 * loss_r + w2 * loss_cw
 

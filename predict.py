@@ -12,15 +12,11 @@ import torch
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-from src import (
-    create_model,
-    get_val_transform,
-    DEVICE,
-    INPUT_SIZE,
-    IMAGENET_MEAN,
-    IMAGENET_STD
-)
+from net.model import create_model
+from data_class.dataset import get_val_transform
+from config import INPUT_SIZE, IMAGENET_MEAN, IMAGENET_STD
 
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 def load_model(model_path, encoder_name='resnet34', num_classes=2, device=DEVICE):
     """
